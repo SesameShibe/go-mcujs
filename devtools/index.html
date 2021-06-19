@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div id="console" style="height: 50vh; font-family: 'Courier New', Courier, monospace; ">
+        <div id="log" style="height: 100%; overflow-x: hidden; overflow-y: scroll;">
+        </div>
+        <div id="input">
+            <span style="line-height:25px;position:absolute;">>></span>
+            <textarea id="line"
+                style="width: 100%; height:50px; padding-left: 25px;  background-color:lightgray;"></textarea>
+        </div>
+    </div>
+    <script>
+        var ws
+        var divLog = byID('log')
+        var txtLine = byID('line')
+
+        function tryDisconnect() {
+            if (ws) {
+                ws.close()
+            }
+        }
+
+        function appendLog(type, str) {
+
+            divLog.append(str)
+            divLog.append(document.createElement('br'))
+        }
+
+        function tryConnect() {
+            if (ws) {
+                tryDisconnect()
+            }
+            ws = new WebSocket('ws://' + location.host + '/api/dev')
+            ws.onmessage = (e) => {
+                if ((typeof e.data) === "string") {
+                    var msg = e.data
+                    var type = msg[0]
+                    var str = msg.substring(1)
+                    appendLog(type, str)
+                }
+            }
+        }
+        tryConnect()
+
+        function byID(id) {
+            return document.getElementById(id)
+        }
+
+        txtLine.onkeydown = (e) => {
+            if (e.keyCode == 13) {
+                e.preventDefault()
+                appendLog('I', '>> ' + txtLine.value)
+                ws.send(txtLine.value)
+                txtLine.value = ''
+            }
+        }
+    </script>
+</body>
+
+</html>
