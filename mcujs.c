@@ -1,5 +1,4 @@
 #include "mcujs.h"
-#include "lvgl.h"
 #include <stdio.h>
 
 SDL_Window *window;
