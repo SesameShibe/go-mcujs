@@ -2,7 +2,7 @@ package main
 
 /*
 #cgo CFLAGS: -Ilib/SDL2/include -Ilib/lvgl
-#cgo LDFLAGS: -L./lib/SDL2/lib/x64 -lSDL2 -L./lib/lvgl/build -l lvgl
+#cgo LDFLAGS: -L./lib/SDL2/lib/x64 -lSDL2 -L./lib/lvgl -l lvgl
 #include "mcujs.h"
 */
 import "C"
