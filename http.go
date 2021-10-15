@@ -130,10 +130,14 @@ func HttpInit() {
 	obj.Set("createServer", func(port int, staticPath string, apiPath string, flags int) *Server {
 		mux := http.NewServeMux()
 		server := &Server{
-			port:     port,
-			server:   &http.Server{Addr: fmt.Sprintf("0.0.0.0:%d", port), Handler: mux},
-			mux:      mux,
-			upgrader: websocket.Upgrader{},
+			port:   port,
+			server: &http.Server{Addr: fmt.Sprintf("0.0.0.0:%d", port), Handler: mux},
+			mux:    mux,
+			upgrader: websocket.Upgrader{
+				CheckOrigin: func(r *http.Request) bool {
+					return true
+				},
+			},
 		}
 		if staticPath != "" {
 			mux.Handle("/", http.FileServer(http.Dir(staticPath)))
