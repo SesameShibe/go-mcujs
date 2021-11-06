@@ -13,10 +13,6 @@ spi_flash_mmap_handle_t fontMmapHandle;
 #include "stdlib.h"
 #include "lcd-driver.h"
 
-uint16_t fbPosX;
-uint16_t fbPosY;
-uint16_t fbFgColor;
-
 typedef struct _FB_FONT {
   int valid;
   int charWidth;
@@ -33,8 +29,6 @@ FB_FONT fbFontCJK16;
 
 FB_FONT *fbCurrentFont;
 
-static inline void fbSetP(MyLcdGfx *gfx, uint16_t x, uint16_t y, uint16_t v) { gfxDrawPixel(gfx, x, y, v); }
-
 static void fbInitFont() {
   FB_FONT *pFont = &fbFontCJK16;
   const void *fontData = 0;
@@ -42,13 +36,16 @@ static void fbInitFont() {
   memset(pFont, 0, sizeof(FB_FONT));
 
 #ifdef MCUJS_EMU
+  // load font.bin as font data
   FILE *fp = fopen("font.bin", "rb");
-  fseek(fp, 0, SEEK_END);
-  long fsize = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-  fontData = (const void *)malloc(fsize);
-  fread((void *)fontData, 1, fsize, fp);
-  fclose(fp);
+  if (fp) {
+    fseek(fp, 0, SEEK_END);
+    int fontSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    fontData = (uint8_t *)malloc(fontSize);
+    fread((void *)fontData, 1, fontSize, fp);
+    fclose(fp);
+  }
 #else
   auto part = esp_partition_find_first((esp_partition_type_t)0x40,
                                        (esp_partition_subtype_t)0, "font");
@@ -60,19 +57,24 @@ static void fbInitFont() {
   }
 #endif
 
-  pFont->valid = 1;
-  pFont->charWidth = *(uint8_t *)(fontData + 13);
-  pFont->charHeight = *(uint8_t *)(fontData + 14);
-  pFont->charDataSize = 1 + ((pFont->charWidth + 7) / 8) * pFont->charHeight;
-  pFont->pageSize = pFont->charDataSize * 256;
-  pFont->pData = (uint8_t *)fontData;
-  pFont->pIndex = pFont->pData + 16;
-  pFont->pCharData = pFont->pIndex + 256;
+  if(fontData) {
+    pFont->valid = 1;
+    pFont->charWidth = *(uint8_t *)(fontData + 13);
+    pFont->charHeight = *(uint8_t *)(fontData + 14);
+    pFont->charDataSize = 1 + ((pFont->charWidth + 7) / 8) * pFont->charHeight;
+    pFont->pageSize = pFont->charDataSize * 256;
+    pFont->pData = (uint8_t *)fontData;
+    pFont->pIndex = pFont->pData + 16;
+    pFont->pCharData = pFont->pIndex + 256;
 
-  fbCurrentFont = pFont;
+    fbCurrentFont = pFont;
+    printf("fbInitFont: font data loaded\n");
+  }else{
+    printf("fbInitFont: font data not found\n");
+  }
 }
 
-static int fbDrawUnicodeRune(MyLcdGfx *gfx, uint32_t rune) {
+static int fbDrawUnicodeRune(MyLcdGfx_t *gfx, int16_t sx, int16_t sy, uint32_t rune, uint16_t color) {
   if (!fbCurrentFont) {
     return 0;
   }
@@ -84,11 +86,6 @@ static int fbDrawUnicodeRune(MyLcdGfx *gfx, uint32_t rune) {
   int screenW = gfx->width();
   int screenH = gfx->height();
   rune = (uint16_t)(rune);
-  if (rune == '\n') {
-    fbPosY += fontH + 1;
-    fbPosX = 0;
-    return 0;
-  }
   uint8_t pgOffset = fbCurrentFont->pIndex[rune >> 8];
   if (pgOffset == 0xFF) {
     return 0;
@@ -98,30 +95,25 @@ static int fbDrawUnicodeRune(MyLcdGfx *gfx, uint32_t rune) {
   uint8_t width = *ptr;
   ptr++;
 
-  if (fbPosX + width >= screenW) {
-    fbPosY += fontH + 1;
-    fbPosX = 0;
+  if (width + sx > screenW) {
+    return -1;
   }
-  if (fbPosY + fontH >= screenH) {
-    return 0;
-  }
+
   for (uint8_t y = 0; y < fontH; y++) {
     for (uint8_t x = 0; x < width; x++) {
       uint8_t pix = ptr[y * 2 + x / 8] & (1 << (x % 8));
       if (pix) {
-        fbSetP(gfx, fbPosX + x, fbPosY + y, 1);
+        gfxDrawPixel(gfx, sx + x, sy + y, color);
       }
     }
   }
-  fbPosX += width + 1;
-  if (fbPosX >= screenW) {
-    fbPosY += fontH + 1;
-    fbPosX = 0;
-  }
+  
   return width;
 }
 
-static void fbDrawUtf8String(MyLcdGfx *gfx, const char *utf8Str) {
+static void fbDrawUtf8String(MyLcdGfx_t *gfx, int16_t x, int16_t y, const char *utf8Str, uint16_t color) {
+  uint16_t fbPosX = x;
+  uint16_t fbPosY = y;
   uint8_t *p = (uint8_t *)utf8Str;
   uint16_t rune = 0;
   while (*p) {
@@ -152,6 +144,26 @@ static void fbDrawUtf8String(MyLcdGfx *gfx, const char *utf8Str) {
         }
       }
     }
-    fbDrawUnicodeRune(gfx, rune);
+    
+    int fontH = fbCurrentFont->charHeight;
+    if (rune == '\n') {
+      fbPosY += fontH + 1;
+      fbPosX = x;
+      continue;
+    } else {
+      int cw = fbDrawUnicodeRune(gfx, fbPosX, fbPosY, rune, color);
+
+      if (cw == -1){
+        fbPosX = x;
+        fbPosY += fontH + 1;
+        cw = fbDrawUnicodeRune(gfx, fbPosX, fbPosY, rune, color);
+      }
+
+      fbPosX += cw + 1;
+      if(fbPosX > gfx->width()) {
+        fbPosY += fontH + 1;
+        fbPosX = x;
+      }
+    }
   }
 }

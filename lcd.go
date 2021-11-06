@@ -33,6 +33,10 @@ func (gfx *Gfx) FillRect(x, y, w, h, color int) {
 	C.gfxFillRect(C.cgfx, C.short(x), C.short(y), C.short(w), C.short(h), C.ushort(color))
 }
 
+func (gfx *Gfx) FillScreen(color int) {
+	C.gfxFillScreen(C.cgfx, C.ushort(color))
+}
+
 func (gfx *Gfx) DrawCircle(x, y, radius, color int) {
 	C.gfxDrawCircle(C.cgfx, C.short(x), C.short(y), C.short(radius), C.ushort(color))
 }
@@ -63,6 +67,10 @@ func (gfx *Gfx) DrawRoundRect(x, y, w, h, radius, color int) {
 
 func (gfx *Gfx) FillRoundRect(x, y, w, h, radius, color int) {
 	C.gfxFillRoundRect(C.cgfx, C.short(x), C.short(y), C.short(w), C.short(h), C.short(radius), C.ushort(color))
+}
+
+func (gfx *Gfx) DrawString(x, y, color int, str string) {
+	C.gfxDrawString(C.cgfx, C.short(x), C.short(y), C.CString(str), C.ushort(color))
 }
 
 var gfx *Gfx = &Gfx{

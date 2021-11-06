@@ -2,7 +2,7 @@
 
 extern "C"
 {
-  #include "lcd-driver.h"
+#include "lcd-driver.h"
 }
 
 struct MyLcdGfx_t : MyLcdGfx
@@ -17,7 +17,7 @@ MyLcdGfx_t *gfxNewObject(int16_t w, int16_t h)
   return gfx;
 }
 
-uint8_t * gfxGetFrameBuffer(MyLcdGfx_t *gfx)
+uint8_t *gfxGetFrameBuffer(MyLcdGfx_t *gfx)
 {
   return gfx->getFrameBuffer();
 }
@@ -130,4 +130,16 @@ void gfxDrawRGBBitmap(MyLcdGfx_t *gfx, int16_t x, int16_t y, const uint16_t *bit
                       int16_t h)
 {
   gfx->drawRGBBitmap(x, y, bitmap, w, h);
+}
+
+#include "font.h"
+
+void gfxDrawString(MyLcdGfx_t *gfx, int16_t x, int16_t y, const char *str, uint16_t color)
+{
+  if (!fbCurrentFont)
+  {
+    fbInitFont();
+  }
+
+  fbDrawUtf8String(gfx, x, y, str, color);
 }
