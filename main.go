@@ -1,9 +1,10 @@
 package main
 
 /*
-#cgo CFLAGS: -Ilib/SDL2/include -Ilib/lvgl
-#cgo LDFLAGS: -L./lib/SDL2/lib/x64 -lSDL2 -L./lib/lvgl -l lvgl
-#include "mcujs.h"
+#cgo CXXFLAGS: -std=c++11
+#cgo CFLAGS: -Ilib/SDL2/include -Ilib/Adafruit -Igfx
+#cgo LDFLAGS: -L./lib/SDL2/lib/x64 -lSDL2 -L./gfx -llcd -lstdc++
+#include "mcujs-lcd.h"
 */
 import "C"
 
@@ -56,7 +57,7 @@ func main() {
 	vm.SetFieldNameMapper(goja.UncapFieldNameMapper())
 	vm.Set("print", print)
 	HttpInit()
-	LvglInit()
+	GfxInit()
 	runFile("js/underscore.js")
 	runFile("js/devserver.js")
 	runFile("js/boot.js")

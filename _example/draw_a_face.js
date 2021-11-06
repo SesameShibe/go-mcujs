@@ -1,0 +1,7 @@
+gfx.fillRect(10, 10, 320-20, 240-20, 0)
+gfx.fillCircle(80,120,40,1)
+gfx.fillCircle(80+160,120,40,1)
+gfx.drawLine(160-20, 240-60, 160+20, 240-60, 1)
+gfx.drawLine(160-20, 240-59, 160+20, 240-59, 1)
+gfx.fillCircle(80,120,10,0)
+gfx.fillCircle(80+160,120,10,0)
